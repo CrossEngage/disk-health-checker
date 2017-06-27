@@ -15,6 +15,7 @@ dist: $(PLATFORMS)
 $(PLATFORMS):
 	$(eval GOOS := $(firstword $(subst -, ,$@)))
 	$(eval GOARCH := $(lastword $(subst -, ,$@)))
+	rm -rfv $(DIST_DIR)
 	mkdir -p $(DIST_DIR)
 	env GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o $(DIST_DIR)/$(APPNAME).$(RELEASE).$@
 

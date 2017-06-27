@@ -28,13 +28,14 @@ var (
 	attrIDs = app.Flag("attrs", "SMART Attribute IDs to return").Default(
 		"1", "2", "3", "5", "7", "8", "9", "10", "12", "171", "172", "173",
 		"174", "190", "194", "197", "198", "199", "231", "233").Ints()
-
-	slog *syslog.Writer
 )
 
-func init() {
-	var err error
-	if slog, err = syslog.New(syslog.LOG_NOTICE|syslog.LOG_DAEMON, appName); err != nil {
+func main() {
+	app.Version(version)
+	kingpin.MustParse(app.Parse(os.Args[1:]))
+
+	slog, err := syslog.New(syslog.LOG_NOTICE|syslog.LOG_DAEMON, appName)
+	if err != nil {
 		log.Fatal(err)
 	}
 
@@ -43,11 +44,6 @@ func init() {
 	} else {
 		log.SetOutput(slog)
 	}
-}
-
-func main() {
-	app.Version(version)
-	kingpin.MustParse(app.Parse(os.Args[1:]))
 
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -67,8 +63,6 @@ func main() {
 		}
 
 		info := parseSMARTCtlInfo(stdOut)
-		log.Printf("\n%#v\n", info)
-
 		fmt.Printf("%s,host=%s,disk=%s,type=%s ", *checkName, hostname, device.Path, device.Type)
 		values := []string{fmt.Sprintf(`disk_status="%s"`, info.Health)}
 

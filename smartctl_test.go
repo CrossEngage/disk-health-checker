@@ -156,8 +156,14 @@ Copyright (C) 2002-13, Bruce Allen, Christian Franke, www.smartmontools.org
 
 === START OF READ SMART DATA SECTION ===
 SMART overall-health self-assessment test result: PASSED
+Warning: This result is based on an Attribute check.
 
 `
+
+func TestParseHealthOutput(t *testing.T) {
+	healthy := parseHealthOutput(diskHealthOutput)
+	assert.True(t, healthy)
+}
 
 var diskAttributesOutput = `
 smartctl 6.2 2013-07-26 r3841 [x86_64-linux-4.4.0-47-generic] (local build)

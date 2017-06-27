@@ -129,3 +129,13 @@ func parseSMARTCtlInfo(out string) *smartCtlInfo {
 	}
 	return info
 }
+
+func parseHealthOutput(out string) (healthy bool) {
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	for _, line := range lines {
+		if healthy = strings.Contains(line, "PASSED"); healthy {
+			return
+		}
+	}
+	return
+}

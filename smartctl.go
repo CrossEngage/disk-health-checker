@@ -6,12 +6,28 @@ import (
 	"strings"
 )
 
-func parseSMARTCtlScan(out string) []string {
+type deviceInfo struct {
+	Raw  string
+	Path string
+	Type string
+}
+
+var deviceInfoRgx = regexp.MustCompile(`(\S+) \-d (\S+)`)
+
+func parseSMARTCtlScan(out string) []deviceInfo {
 	lines := strings.Split(strings.TrimSpace(out), "\n")
-	devices := make([]string, 0, len(lines))
+	devices := make([]deviceInfo, 0, len(lines))
 	for _, line := range lines {
 		tmp := strings.Split(line, "#")
-		devices = append(devices, strings.TrimSpace(tmp[0]))
+		di := deviceInfo{Raw: tmp[0]}
+		if m := deviceInfoRgx.FindAllStringSubmatch(di.Raw, -1); m != nil {
+			di.Path = m[0][1]
+			di.Type = m[0][2]
+			if di.Type == "scsi" {
+				di.Type = "auto"
+			}
+			devices = append(devices, di)
+		}
 	}
 	return devices
 }

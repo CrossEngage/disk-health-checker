@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,18 +9,32 @@ import (
 var scanOutput = `
 /dev/sda -d scsi # /dev/sda, SCSI device
 /dev/sdb -d scsi # /dev/sdb, SCSI device
-/dev/bus/4 -d megaraid,14 # /dev/bus/4 [megaraid_disk_14], SCSI device
-/dev/bus/4 -d megaraid,15 # /dev/bus/4 [megaraid_disk_15], SCSI device
 `
 
 func TestGetSMARTDevices(t *testing.T) {
 	devices := parseSMARTCtlScan(scanOutput)
-	fmt.Printf("%#v\n", devices)
 	assert.NotEmpty(t, devices)
-	assert.Equal(t, "/dev/sda -d scsi", devices[0])
-	assert.Equal(t, "/dev/sdb -d scsi", devices[1])
-	assert.Equal(t, "/dev/bus/4 -d megaraid,14", devices[2])
-	assert.Equal(t, "/dev/bus/4 -d megaraid,15", devices[3])
+	assert.Equal(t, "/dev/sda", devices[0].Path)
+	assert.Equal(t, "auto", devices[0].Type)
+	assert.Equal(t, "/dev/sdb", devices[1].Path)
+	assert.Equal(t, "auto", devices[1].Type)
+}
+
+var scanHWRAIDOutput = `
+/dev/sda -d scsi # /dev/sda, SCSI device
+/dev/bus/4 -d megaraid,14 # /dev/bus/4 [megaraid_disk_14], SCSI device
+/dev/bus/4 -d megaraid,15 # /dev/bus/4 [megaraid_disk_15], SCSI device
+`
+
+func TestGetSMARTDevicesOnHWRAID(t *testing.T) {
+	devices := parseSMARTCtlScan(scanHWRAIDOutput)
+	assert.NotEmpty(t, devices)
+	assert.Equal(t, "/dev/sda", devices[0].Path)
+	assert.Equal(t, "auto", devices[0].Type)
+	assert.Equal(t, "/dev/bus/4", devices[1].Path)
+	assert.Equal(t, "megaraid,14", devices[1].Type)
+	assert.Equal(t, "/dev/bus/4", devices[2].Path)
+	assert.Equal(t, "megaraid,15", devices[2].Type)
 }
 
 var diskInfoOutput = `

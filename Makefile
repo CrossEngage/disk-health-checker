@@ -18,8 +18,10 @@ $(PLATFORMS):
 	mkdir -p $(DIST_DIR)
 	env GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o $(DIST_DIR)/$(APPNAME).$(RELEASE).$@
 
+md5: dist
+	cd $(DIST_DIR) && md5sum $(APPNAME).$(RELEASE).* | tee MD5SUM
 
-release: dist
+release: md5
 	go get github.com/tcnksm/ghr
 	if [ "x$$(git config --global --get github.token)" = "x" ]; then echo "Missing github.token in your git config"; fi
-	ghr -recreate -u crossengage $(RELEASE) dist/
+	ghr -recreate -u crossengage $(RELEASE) $(DIST_DIR)

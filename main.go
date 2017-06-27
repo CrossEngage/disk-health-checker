@@ -11,7 +11,7 @@ import (
 
 	"log"
 
-	"gopkg.in/alecthomas/kingpin.v1"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
@@ -19,46 +19,72 @@ var (
 	app       = kingpin.New(appName, "A command-line checker for Disk Health checks using smartctl, by CrossEngage")
 	checkName = app.Flag("name", "check name").Default(appName).String()
 	smartCtl  = app.Flag("smartctl", "Path of smartctl").Default("/usr/sbin/smartctl").String()
+
+	// https://en.wikipedia.org/wiki/S.M.A.R.T.#Known_ATA_S.M.A.R.T._attributes
+	attrIDs = app.Flag("attrs", "SMART Attribute IDs to return").Default(
+		"1", "2", "3", "5", "7", "8", "9", "10", "12", "171", "172", "173",
+		"174", "190", "194", "197", "198", "199", "231", "233").Ints()
+
+	slog *syslog.Writer
 )
 
-func main() {
-	app.Version(version)
-	kingpin.MustParse(app.Parse(os.Args[1:]))
-
-	_, err := os.Hostname()
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func init() {
 	slog, err := syslog.New(syslog.LOG_NOTICE|syslog.LOG_DAEMON, appName)
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.SetOutput(slog)
+}
 
-	cmd := exec.Command(*smartCtl, "--output-event-state", "--comma-separated-output", "--no-header-output")
+func main() {
+	app.Version(version)
+	kingpin.MustParse(app.Parse(os.Args[1:]))
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	stdOut, _, err := smartctl("--scan")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	devices := parseSMARTCtlScan(stdOut)
+	for _, device := range devices {
+		stdOut, _, err := smartctl("-i", "-H", device.Path, "-d", device.Type)
+		if err != nil {
+			slog.Err(err.Error())
+		}
+
+		info := parseSMARTCtlInfo(stdOut)
+		fmt.Printf("%s,host=%s,disk=%s,type=%s", *checkName, hostname, device.Path, device.Type)
+		fmt.Printf(` disk_status="%s"`, info.Health)
+
+		if info.SMARTSupport {
+			fmt.Print(",")
+			stdOut, _, err = smartctl("-A", device.Path, "-d", device.Type)
+			if err != nil {
+				slog.Err(err.Error())
+			}
+			attrs := parseAttributeList(stdOut)
+			for _, attr := range attrs {
+				fmt.Print(attr.String(true, false))
+			}
+		}
+		fmt.Println()
+	}
+}
+
+func smartctl(args ...string) (string, string, error) {
+	cmd := exec.Command(*smartCtl, args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		log.Fatalf("Failed running `%s` with error `%s`\n", *smartCtl, err)
+		return "", "", fmt.Errorf("Failed running `%s` with error `%s`", *smartCtl, err)
 	}
-
 	outStr, errStr := string(stdout.Bytes()), string(stderr.Bytes())
 	slog.Debug(fmt.Sprintf("%s: stdout `%s`, stderr `%s`", *smartCtl, outStr, errStr))
-
-	// outStr = strings.TrimSpace(outStr)
-	// lines := strings.Split(outStr, "\n")
-	// if len(lines) >= 0 {
-	// 	for _, line := range lines {
-	// 		ev, err := ,,,(line)
-	// 		if err != nil {
-	// 			slog.Err(fmt.Sprintf("Could not parse `%s` stdout: `%s`", line, outStr))
-	// 		}
-	// 		fmt.Println(ev.InfluxDB(*checkName, hostname))
-	// 	}
-	// } else {
-	// 	ev := ...()
-	// 	fmt.Println(ev.InfluxDB(*checkName, hostname))
-	// }
+	return outStr, errStr, nil
 }

@@ -2,7 +2,7 @@ APPNAME   := disk-health-checker
 DIST_DIR  := ./dist
 PLATFORMS := linux-386 linux-amd64 linux-arm
 
-RELEASE   := $(shell git describe --all --always)
+RELEASE   := $(shell git describe --tags --always)
 
 build:
 	go generate

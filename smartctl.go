@@ -147,11 +147,11 @@ type smartAttribute struct {
 	Value         int    `type:"value"`
 	Worst         int    `type:"value"`
 	Thresh        int    `type:"value"`
-	Type          string `type:"detail"`
-	Updated       string `type:"detail"`
-	WhenFailed    string `type:"detail" name:"when_failed"`
-	RawValue      int    `type:"value" name:"raw_value"`
-	RawValueNotes string `type:"detail" name:"raw_value_notes"`
+	Type          string `type:"detail" escape:"true"`
+	Updated       string `type:"detail" escape:"true"`
+	WhenFailed    string `type:"detail" name:"When_Failed" escape:"true"`
+	RawValue      int    `type:"value" name:"Raw_Value"`
+	RawValueNotes string `type:"detail" name:"Raw_Value_Notes" escape:"true"`
 }
 
 func newSmartAttribute(columns []string) *smartAttribute {
@@ -189,6 +189,7 @@ func (attr smartAttribute) String(useNames, detailed bool) string {
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 		outputType := field.Tag.Get("type")
+		escape := field.Tag.Get("escape")
 
 		if outputType == "value" || detailed && outputType == "detail" {
 			fieldName := field.Tag.Get("name")
@@ -198,13 +199,18 @@ func (attr smartAttribute) String(useNames, detailed bool) string {
 			} else {
 				key = attr.getKey(useNames, field.Name)
 			}
-			kv[key] = fmt.Sprintf("%v", v.Field(i).Interface())
+
+			if escape == "true" {
+				kv[key] = fmt.Sprintf(`"%v"`, v.Field(i).Interface())
+			} else {
+				kv[key] = fmt.Sprintf("%v", v.Field(i).Interface())
+			}
 		}
 	}
 
 	kvs := []string{}
 	for k, v := range kv {
-		kvs = append(kvs, fmt.Sprintf(`%v="%v"`, k, v))
+		kvs = append(kvs, fmt.Sprintf(`%v=%v`, k, v))
 	}
 
 	return strings.Join(kvs, ",")

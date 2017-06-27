@@ -63,7 +63,7 @@ func main() {
 		}
 
 		info := parseSMARTCtlInfo(stdOut)
-		fmt.Printf("%s,host=%s,disk=%s,type=%s ", *checkName, hostname, device.Path, device.Type)
+		fmt.Printf("%s,host=%s,disk=%s,type=%s ", *checkName, hostname, device.Path, strings.Replace(device.Type, ",", "_", -1))
 		values := []string{fmt.Sprintf(`disk_status="%s"`, info.Health)}
 
 		if info.SMARTSupport {
